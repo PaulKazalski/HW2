@@ -1,0 +1,195 @@
+Sub Full_Run()
+
+' Before we do anything, we need to declare a for loop that will go from worksheet to worksheet.
+Dim ws As Worksheet
+For Each ws In ThisWorkbook.Sheets
+' Activate each sheet right after looping to it in order to write in it.
+ws.Activate
+
+' ---------------------------------------------------------------------------------------
+'              STEP 1: CONVERT DAILY DATA INTO YEARLY DATA
+' ---------------------------------------------------------------------------------------
+
+' The raw data has daily or near-daily information on opening, closing and volumes for each ticker.
+' The output data will have one row for each ticker per year, giving yearly data.
+
+' --------------------- STEP 1'S DECLARATIONS -------------------------------------------
+
+' Declare our first "Opener", the opening price of a given ticker for the year
+Dim Opener As Double
+' The first opening price will always be on Row 2, column 3
+Opener = Cells(2, 3)
+
+' Declare our "Closer", the closing price of a given ticker for the year
+Dim Closer As Double
+
+' Declare the ticker's yearly change - the calculation will come later.
+Dim Year_Change As Double
+
+' Declare the ticker's percentage change change - the calculation will come later.
+Dim Pct_Change As Double
+
+' Declare our "Volume", the total trading volume of a given ticker for the year
+Dim Volume As Double
+' The opening Volume starts at zero and gets summed over the year
+Volume = 0
+
+' We now declare the variable that tracks the row that will store our ticker input.
+' This variable must increase by one as each unique ticker is added
+Dim Output_Tracker As Integer
+Output_Tracker = 2
+
+' ------------------- STEP 1'S FOR LOOP ---------------------------------------------------
+
+' Run a Loop that will go through each row, detect a change in the ticker name, and
+' perform the necessary calculations if that change exists on a given row.
+For i = 2 To 80000
+
+' You have to sum the volume for every row, although sometimes you reset the volume
+' back to zero
+Volume = Volume + Cells(i, 7)
+
+' Check "Is the ticker on the next row different from the ticker on the current row?"
+    If Cells(i, 1) <> Cells(i + 1, 1) Then
+
+' Collect that closing value - that is the closing value for the year.
+        Closer = Cells(i, 6)
+        
+' Calculate the yearly change
+        Year_Change = Closer - Opener
+        
+' Calculate the percentage change
+        Pct_Change = Year_Change / Opener
+        
+' Put the ticker, Year Change, Percent Change and Volume in their columns
+        Cells(Output_Tracker, 9) = Cells(i, 1)
+        Cells(Output_Tracker, 10) = Year_Change
+        Cells(Output_Tracker, 11) = Pct_Change
+        Cells(Output_Tracker, 12) = Volume
+    
+' Move the output one row down
+        Output_Tracker = Output_Tracker + 1
+' Reset the Opener
+        Opener = Cells(i + 1, 3)
+' Reset the volume
+        Volume = 0
+        
+    End If
+  
+Next i
+
+' ---------------------------------------------------------------------------------------
+'              STEP 2: FORMAT YEARLY DATA AND PRODUCE MAXIMUM DATA
+' ---------------------------------------------------------------------------------------
+
+' Some of the yearly data can be better formatted after initial calculations.
+' Also, some of the yearly data can be summarized to produce information such as "biggest winner".
+' Both actions will be done with the same for loop, so they are both part of the second step.
+
+' -------------------------- STEP 2'S DECLARATIONS --------------------------------------
+
+' We want to know the "biggest winner" - the ticker with the biggest percentage change.
+' We have to declare and initialize a Winner Variable and Row Tracker for the winner.
+Dim Winner As Double
+Dim Winner_Row As Integer
+Winner = 0
+Winner_Row = 2
+
+' We want to know the "biggest loser" - the ticker with the most negative percentage change.
+' We have to declare and initialize a Loser Variable and Row Tracker for the loser.
+Dim Loser As Double
+Dim Loser_Row As Integer
+Loser = 0
+Loser_Row = 2
+
+' We want to know the most volume - the ticker that had the greatest yearly volume.
+' We have to declare and initialize a Most volume Variable and Row Tracker for the most volume.
+Dim Most_Vol As Double
+Dim Most_Vol_Row As Integer
+Most_Vol = 0
+Most_Vol_Row = 2
+
+' ------------------------------ STEP 2'S FOR LOOP -----------------------------------------
+
+' Run a significantly shorter loop that goes through the output data, provides conditional
+' formatting, and checks for winners/losers and highest volumes.
+For j = 2 To 500
+    
+' This if loop goes down the rows, and replaces the winner every time it sees a value
+' that beats the old winner. The winner's row is recorded.
+    If Cells(j, 11) > Winner Then
+        Winner = Cells(j, 11)
+        Winner_Row = j
+    End If
+    
+' This if loop goes down the rows, and replaces the loser every time it sees a value
+' that 'beats' the old loser. The loser's row is recorded.
+    If Cells(j, 11) < Loser Then
+        Loser = Cells(j, 11)
+        Loser_Row = j
+    End If
+    
+' This if loop goes down the rows, and replaces the most volume every time it sees a value
+' that beats the old value. The corresponding row is recorded.
+    If Cells(j, 12) > Most_Vol Then
+        Most_Vol = Cells(j, 12)
+        Most_Vol_Row = j
+    End If
+      
+' This if loop highlights the percentage change to red if it's negative.
+    If Cells(j, 10) < 0 Then
+        Cells(j, 10).Interior.ColorIndex = 3
+    End If
+    
+' This if loop highlights the percentage change to green if it's positive.
+     If Cells(j, 10) > 0 Then
+        Cells(j, 10).Interior.ColorIndex = 4
+    End If
+    
+' This if loop provides no highlight if there's no change.  This loop is not strictly
+' necessary, but it's good to be explicit.
+    If Cells(j, 10) = 0 Then
+        Cells(j, 10).Interior.ColorIndex = 0
+    End If
+                
+Next j
+
+' The winner, loser and most volume information is recorded.  The "row" variables are used to
+' recall the corresponding ticker name for the given winner, loser, and highest volume.
+Range("Q2") = Winner
+Range("P2") = Cells(Winner_Row, 9)
+Range("Q3") = Loser
+Range("P3") = Cells(Loser_Row, 9)
+Range("Q4") = Most_Vol
+Range("P4") = Cells(Most_Vol_Row, 9)
+
+' ---------------------------------------------------------------------------------------------
+'                                          STEP 3 - THE CLEANUP
+' ---------------------------------------------------------------------------------------------
+' Create the header for output data
+    Range("I1") = "Ticker"
+    Range("J1") = "Yearly Change"
+    Range("K1") = "Percent Change"
+    Range("L1") = "Volume"
+    
+' Create the header for the winner/loser/most_vol data
+    Range("P1") = "Ticker"
+    Range("Q1") = "Value"
+
+' Create the rows for the winner/loser/most_vol data
+    Range("O2") = "Greatest % Increase"
+    Range("O3") = "Greatest % Decrease"
+    Range("O4") = "Greatest Total Volume"
+
+' Change the number output accordingly
+
+    Columns("J:J").NumberFormat = "0.00"
+    Columns("K:K").NumberFormat = "0.00%"
+    Columns("L:L").NumberFormat = "0.00E+00"
+    Range("Q2").NumberFormat = "0.00%"
+    Range("Q3").NumberFormat = "0.00%"
+
+' Moves to the next worksheet
+Next ws
+
+End Sub
